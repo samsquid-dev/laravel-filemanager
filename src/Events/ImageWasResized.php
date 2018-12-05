@@ -1,6 +1,6 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Events;
+namespace Samsquid\LaravelFilemanager\Events;
 
 class ImageWasResized
 {

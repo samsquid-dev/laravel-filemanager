@@ -1,51 +1,27 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager;
+namespace Samsquid\LaravelFilemanager;
 
-use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use UniSharp\LaravelFilemanager\Middlewares\CreateDefaultFolder;
-use UniSharp\LaravelFilemanager\Middlewares\MultiUser;
+use Illuminate\Contracts\Config\Repository as Config;
+use Samsquid\LaravelFilemanager\Middlewares\MultiUser;
+use Samsquid\LaravelFilemanager\Middlewares\CreateDefaultFolder;
 
 class Lfm
 {
-    const PACKAGE_NAME = 'laravel-filemanager';
     const DS = '/';
 
+    const PACKAGE_NAME = 'laravel-filemanager';
+
     protected $config;
+
     protected $request;
 
     public function __construct(Config $config = null, Request $request = null)
     {
-        $this->config = $config;
+        $this->config  = $config;
         $this->request = $request;
-    }
-
-    public function getStorage($storage_path)
-    {
-        return new LfmStorageRepository($storage_path, $this);
-    }
-
-    public function input($key)
-    {
-        return $this->translateFromUtf8($this->request->input($key));
-    }
-
-    public function config($key)
-    {
-        return $this->config->get('lfm.' . $key);
-    }
-
-    /**
-     * Get only the file name.
-     *
-     * @param  string  $path  Real path of a file.
-     * @return string
-     */
-    public function getNameFromPath($path)
-    {
-        return pathinfo($path, PATHINFO_BASENAME);
     }
 
     public function allowFolderType($type)
@@ -57,11 +33,39 @@ class Lfm
         }
     }
 
-    public function getCategoryName()
+    /**
+     * Check if users are allowed to use their private folders.
+     *
+     * @return bool
+     */
+    public function allowMultiUser()
     {
-        $type = $this->currentLfmType();
+        return $this->config->get('lfm.allow_multi_user') === true;
+    }
 
-        return $this->config->get('lfm.folder_categories.' . $type . '.folder_name', 'files');
+    /**
+     * Check if users are allowed to use the shared folder.
+     * This can be disabled only when allowMultiUser() is true.
+     *
+     * @return bool
+     */
+    public function allowShareFolder()
+    {
+        if (!$this->allowMultiUser()) {
+            return true;
+        }
+
+        return $this->config->get('lfm.allow_share_folder') === true;
+    }
+
+    public function availableMimeTypes()
+    {
+        return $this->config->get('lfm.folder_categories.' . $this->currentLfmType() . '.valid_mime');
+    }
+
+    public function config($key)
+    {
+        return $this->config->get('lfm.' . $key);
     }
 
     /**
@@ -73,7 +77,7 @@ class Lfm
     {
         $lfm_type = 'file';
 
-        $request_type = lcfirst(str_singular($this->input('type') ?: ''));
+        $request_type    = lcfirst(str_singular($this->input('type') ?: ''));
         $available_types = array_keys($this->config->get('lfm.folder_categories') ?: []);
 
         if (in_array($request_type, $available_types)) {
@@ -83,12 +87,46 @@ class Lfm
         return $lfm_type;
     }
 
+    /**
+     * Get directory seperator of current operating system.
+     *
+     * @return string
+     */
+    public function ds()
+    {
+        $ds = Lfm::DS;
+        if ($this->isRunningOnWindows()) {
+            $ds = '\\';
+        }
+
+        return $ds;
+    }
+
+    /**
+     * Shorter function of getting localized error message..
+     *
+     * @param  mixed  $error_type  Key of message in lang file.
+     * @param  mixed  $variables   Variables the message needs.
+     * @return string
+     */
+    public function error($error_type, $variables = [])
+    {
+        throw new \Exception(trans(self::PACKAGE_NAME . '::lfm.error-' . $error_type, $variables));
+    }
+
+    public function getCategoryName()
+    {
+        $type = $this->currentLfmType();
+
+        return $this->config->get('lfm.folder_categories.' . $type . '.folder_name', 'files');
+    }
+
     public function getDisplayMode()
     {
-        $type_key = $this->currentLfmType();
+        $type_key     = $this->currentLfmType();
         $startup_view = $this->config->get('lfm.folder_categories.' . $type_key . '.startup_view');
 
-        $view_type = 'grid';
+        $view_type           = 'grid';
         $target_display_type = $this->input('show_list') ?: $startup_view;
 
         if (in_array($target_display_type, ['list', 'grid'])) {
@@ -98,19 +136,25 @@ class Lfm
         return $view_type;
     }
 
-    public function getUserSlug()
+    public function getFileIcon($ext)
     {
-        $config = $this->config->get('lfm.user_folder_name');
+        return $this->config->get("lfm.file_icon_array.{$ext}", 'fa-file-o');
+    }
 
-        if (is_callable($config)) {
-            return call_user_func($config);
-        }
+    public function getFileType($ext)
+    {
+        return $this->config->get("lfm.file_type_array.{$ext}", 'File');
+    }
 
-        if (class_exists($config)) {
-            return app()->make($config)->userField();
-        }
-
-        return empty(auth()->user()) ? '' : auth()->user()->$config;
+    /**
+     * Get only the file name.
+     *
+     * @param  string  $path  Real path of a file.
+     * @return string
+     */
+    public function getNameFromPath($path)
+    {
+        return pathinfo($path, PATHINFO_BASENAME);
     }
 
     public function getRootFolder($type = null)
@@ -132,24 +176,44 @@ class Lfm
         return '/' . $folder;
     }
 
+    public function getStorage($storage_path)
+    {
+        return new LfmStorageRepository($storage_path, $this);
+    }
+
     public function getThumbFolderName()
     {
         return $this->config->get('lfm.thumb_folder_name');
     }
 
-    public function getFileIcon($ext)
+    public function getUserSlug()
     {
-        return $this->config->get("lfm.file_icon_array.{$ext}", 'fa-file-o');
+        $config = $this->config->get('lfm.user_folder_name');
+
+        if (is_callable($config)) {
+            return call_user_func($config);
+        }
+
+        if (class_exists($config)) {
+            return app()->make($config)->userField();
+        }
+
+        return empty(auth()->user()) ? '' : auth()->user()->$config;
     }
 
-    public function getFileType($ext)
+    public function input($key)
     {
-        return $this->config->get("lfm.file_type_array.{$ext}", 'File');
+        return $this->translateFromUtf8($this->request->input($key));
     }
 
-    public function availableMimeTypes()
+    /**
+     * Check current operating system is Windows or not.
+     *
+     * @return bool
+     */
+    public function isRunningOnWindows()
     {
-        return $this->config->get('lfm.folder_categories.' . $this->currentLfmType() . '.valid_mime');
+        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
     }
 
     public function maxUploadSize()
@@ -158,28 +222,109 @@ class Lfm
     }
 
     /**
-     * Check if users are allowed to use their private folders.
+     * Generates routes of this package.
      *
-     * @return bool
+     * @return void
      */
-    public function allowMultiUser()
+    public static function routes()
     {
-        return $this->config->get('lfm.allow_multi_user') === true;
-    }
+        $middleware = [CreateDefaultFolder::class, MultiUser::class];
+        $as         = 'unisharp.lfm.';
+        $prefix     = config('lfm.url_prefix');
 
-    /**
-     * Check if users are allowed to use the shared folder.
-     * This can be disabled only when allowMultiUser() is true.
-     *
-     * @return bool
-     */
-    public function allowShareFolder()
-    {
-        if (! $this->allowMultiUser()) {
-            return true;
-        }
+        Route::group(compact('middleware', 'as', 'prefix'), function () {
+            $namespace = '\\Samsquid\\LaravelFilemanager\\Controllers\\';
 
-        return $this->config->get('lfm.allow_share_folder') === true;
+            // display main layout
+            Route::get('/', [
+                'uses' => $namespace . 'LfmController@show',
+                'as'   => 'show',
+            ]);
+
+            // display integration error messages
+            Route::get('/errors', [
+                'uses' => $namespace . 'LfmController@getErrors',
+                'as'   => 'getErrors',
+            ]);
+
+            // upload
+            Route::any('/upload', [
+                'uses' => $namespace . 'UploadController@upload',
+                'as'   => 'upload',
+            ]);
+
+            // list images & files
+            Route::get('/jsonitems', [
+                'uses' => $namespace . 'ItemsController@getItems',
+                'as'   => 'getItems',
+            ]);
+
+            Route::get('/move', [
+                'uses' => $namespace . 'ItemsController@move',
+                'as'   => 'move',
+            ]);
+
+            Route::get('/domove', [
+                'uses' => $namespace . 'ItemsController@domove',
+                'as'   => 'domove',
+            ]);
+
+            // folders
+            Route::get('/newfolder', [
+                'uses' => $namespace . 'FolderController@getAddfolder',
+                'as'   => 'getAddfolder',
+            ]);
+
+            // list folders
+            Route::get('/folders', [
+                'uses' => $namespace . 'FolderController@getFolders',
+                'as'   => 'getFolders',
+            ]);
+
+            // crop
+            Route::get('/crop', [
+                'uses' => $namespace . 'CropController@getCrop',
+                'as'   => 'getCrop',
+            ]);
+            Route::get('/cropimage', [
+                'uses' => $namespace . 'CropController@getCropimage',
+                'as'   => 'getCropimage',
+            ]);
+            Route::get('/cropnewimage', [
+                'uses' => $namespace . 'CropController@getNewCropimage',
+                'as'   => 'getCropimage',
+            ]);
+
+            // rename
+            Route::get('/rename', [
+                'uses' => $namespace . 'RenameController@getRename',
+                'as'   => 'getRename',
+            ]);
+
+            // scale/resize
+            Route::get('/resize', [
+                'uses' => $namespace . 'ResizeController@getResize',
+                'as'   => 'getResize',
+            ]);
+            Route::get('/doresize', [
+                'uses' => $namespace . 'ResizeController@performResize',
+                'as'   => 'performResize',
+            ]);
+
+            // download
+            Route::get('/download', [
+                'uses' => $namespace . 'DownloadController@getDownload',
+                'as'   => 'getDownload',
+            ]);
+
+            // delete
+            Route::get('/delete', [
+                'uses' => $namespace . 'DeleteController@getDelete',
+                'as'   => 'getDelete',
+            ]);
+
+            Route::get('/demo', $namespace . 'DemoController@index');
+        });
     }
 
     /**
@@ -195,148 +340,5 @@ class Lfm
         }
 
         return $input;
-    }
-
-    /**
-     * Get directory seperator of current operating system.
-     *
-     * @return string
-     */
-    public function ds()
-    {
-        $ds = Lfm::DS;
-        if ($this->isRunningOnWindows()) {
-            $ds = '\\';
-        }
-
-        return $ds;
-    }
-
-    /**
-     * Check current operating system is Windows or not.
-     *
-     * @return bool
-     */
-    public function isRunningOnWindows()
-    {
-        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-    }
-
-    /**
-     * Shorter function of getting localized error message..
-     *
-     * @param  mixed  $error_type  Key of message in lang file.
-     * @param  mixed  $variables   Variables the message needs.
-     * @return string
-     */
-    public function error($error_type, $variables = [])
-    {
-        throw new \Exception(trans(self::PACKAGE_NAME . '::lfm.error-' . $error_type, $variables));
-    }
-
-    /**
-     * Generates routes of this package.
-     *
-     * @return void
-     */
-    public static function routes()
-    {
-        $middleware = [ CreateDefaultFolder::class, MultiUser::class ];
-        $as = 'unisharp.lfm.';
-        $prefix = config('lfm.url_prefix');
-
-        Route::group(compact('middleware', 'as', 'prefix'), function () {
-            $namespace = '\\UniSharp\\LaravelFilemanager\\Controllers\\';
-
-            // display main layout
-            Route::get('/', [
-                'uses' => $namespace . 'LfmController@show',
-                'as' => 'show',
-            ]);
-
-            // display integration error messages
-            Route::get('/errors', [
-                'uses' => $namespace . 'LfmController@getErrors',
-                'as' => 'getErrors',
-            ]);
-
-            // upload
-            Route::any('/upload', [
-                'uses' => $namespace . 'UploadController@upload',
-                'as' => 'upload',
-            ]);
-
-            // list images & files
-            Route::get('/jsonitems', [
-                'uses' => $namespace . 'ItemsController@getItems',
-                'as' => 'getItems',
-            ]);
-
-            Route::get('/move', [
-                'uses' => $namespace . 'ItemsController@move',
-                'as' => 'move',
-            ]);
-
-            Route::get('/domove', [
-                'uses' => $namespace . 'ItemsController@domove',
-                'as' => 'domove'
-            ]);
-
-            // folders
-            Route::get('/newfolder', [
-                'uses' => $namespace . 'FolderController@getAddfolder',
-                'as' => 'getAddfolder',
-            ]);
-
-            // list folders
-            Route::get('/folders', [
-                'uses' => $namespace . 'FolderController@getFolders',
-                'as' => 'getFolders',
-            ]);
-
-            // crop
-            Route::get('/crop', [
-                'uses' => $namespace . 'CropController@getCrop',
-                'as' => 'getCrop',
-            ]);
-            Route::get('/cropimage', [
-                'uses' => $namespace . 'CropController@getCropimage',
-                'as' => 'getCropimage',
-            ]);
-            Route::get('/cropnewimage', [
-                'uses' => $namespace . 'CropController@getNewCropimage',
-                'as' => 'getCropimage',
-            ]);
-
-            // rename
-            Route::get('/rename', [
-                'uses' => $namespace . 'RenameController@getRename',
-                'as' => 'getRename',
-            ]);
-
-            // scale/resize
-            Route::get('/resize', [
-                'uses' => $namespace . 'ResizeController@getResize',
-                'as' => 'getResize',
-            ]);
-            Route::get('/doresize', [
-                'uses' => $namespace . 'ResizeController@performResize',
-                'as' => 'performResize',
-            ]);
-
-            // download
-            Route::get('/download', [
-                'uses' => $namespace . 'DownloadController@getDownload',
-                'as' => 'getDownload',
-            ]);
-
-            // delete
-            Route::get('/delete', [
-                'uses' => $namespace . 'DeleteController@getDelete',
-                'as' => 'getDelete',
-            ]);
-
-            Route::get('/demo', $namespace . 'DemoController@index');
-        });
     }
 }

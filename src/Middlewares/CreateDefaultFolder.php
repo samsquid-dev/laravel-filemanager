@@ -1,19 +1,20 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Middlewares;
+namespace Samsquid\LaravelFilemanager\Middlewares;
 
 use Closure;
-use UniSharp\LaravelFilemanager\Lfm;
-use UniSharp\LaravelFilemanager\LfmPath;
+use Samsquid\LaravelFilemanager\Lfm;
+use Samsquid\LaravelFilemanager\LfmPath;
 
 class CreateDefaultFolder
 {
-    private $lfm;
     private $helper;
+
+    private $lfm;
 
     public function __construct()
     {
-        $this->lfm = app(LfmPath::class);
+        $this->lfm    = app(LfmPath::class);
         $this->helper = app(Lfm::class);
     }
 
@@ -27,7 +28,7 @@ class CreateDefaultFolder
 
     private function checkDefaultFolderExists($type = 'share')
     {
-        if (! $this->helper->allowFolderType($type)) {
+        if (!$this->helper->allowFolderType($type)) {
             return;
         }
 

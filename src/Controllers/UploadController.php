@@ -1,11 +1,9 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
 use Illuminate\Support\Facades\Log;
-use UniSharp\LaravelFilemanager\Events\ImageIsUploading;
-use UniSharp\LaravelFilemanager\Events\ImageWasUploaded;
-use UniSharp\LaravelFilemanager\Lfm;
+use Samsquid\LaravelFilemanager\Lfm;
 
 class UploadController extends LfmController
 {
@@ -26,17 +24,17 @@ class UploadController extends LfmController
     public function upload()
     {
         $uploaded_files = request()->file('upload');
-        $error_bag = [];
-        $new_filename = null;
+        $error_bag      = [];
+        $new_filename   = null;
 
         foreach (is_array($uploaded_files) ? $uploaded_files : [$uploaded_files] as $file) {
             try {
                 $new_filename = $this->lfm->upload($file);
             } catch (\Exception $e) {
                 Log::error($e->getMessage(), [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString()
+                    'file'  => $e->getFile(),
+                    'line'  => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 array_push($error_bag, $e->getMessage());
             }
@@ -44,7 +42,8 @@ class UploadController extends LfmController
 
         if (is_array($uploaded_files)) {
             $response = count($error_bag) > 0 ? $error_bag : parent::$success_response;
-        } else { // upload via ckeditor 'Upload' tab
+        } else {
+            // upload via ckeditor 'Upload' tab
             if (is_null($new_filename)) {
                 $response = $error_bag[0];
             } else {

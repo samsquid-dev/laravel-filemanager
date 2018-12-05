@@ -1,9 +1,9 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Middlewares;
+namespace Samsquid\LaravelFilemanager\Middlewares;
 
 use Closure;
-use UniSharp\LaravelFilemanager\Lfm;
+use Samsquid\LaravelFilemanager\Lfm;
 
 class MultiUser
 {
@@ -18,11 +18,11 @@ class MultiUser
     {
         if ($this->helper->allowFolderType('user')) {
             $previous_dir = $request->input('working_dir');
-            $working_dir = $this->helper->getRootFolder('user');
+            $working_dir  = $this->helper->getRootFolder('user');
 
             if ($previous_dir == null) {
                 $request->merge(compact('working_dir'));
-            } elseif (! $this->validDir($previous_dir)) {
+            } elseif (!$this->validDir($previous_dir)) {
                 $request->replace(compact('working_dir'));
             }
         }

@@ -1,10 +1,10 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
 use Intervention\Image\Facades\Image;
-use UniSharp\LaravelFilemanager\Events\ImageIsResizing;
-use UniSharp\LaravelFilemanager\Events\ImageWasResized;
+use Samsquid\LaravelFilemanager\Events\ImageIsResizing;
+use Samsquid\LaravelFilemanager\Events\ImageWasResized;
 
 class ResizeController extends LfmController
 {
@@ -18,26 +18,26 @@ class ResizeController extends LfmController
         $ratio = 1.0;
         $image = request('img');
 
-        $original_image = Image::make($this->lfm->setName($image)->path('absolute'));
-        $original_width = $original_image->width();
+        $original_image  = Image::make($this->lfm->setName($image)->path('absolute'));
+        $original_width  = $original_image->width();
         $original_height = $original_image->height();
 
         $scaled = false;
 
         // FIXME size should be configurable
         if ($original_width > 600) {
-            $ratio = 600 / $original_width;
-            $width = $original_width * $ratio;
+            $ratio  = 600 / $original_width;
+            $width  = $original_width * $ratio;
             $height = $original_height * $ratio;
             $scaled = true;
         } else {
-            $width = $original_width;
+            $width  = $original_width;
             $height = $original_height;
         }
 
         if ($height > 400) {
-            $ratio = 400 / $original_height;
-            $width = $original_width * $ratio;
+            $ratio  = 400 / $original_height;
+            $width  = $original_width * $ratio;
             $height = $original_height * $ratio;
             $scaled = true;
         }

@@ -2,13 +2,12 @@
 
 namespace Tests;
 
-use Illuminate\Contracts\Config\Repository as Config;
-use Illuminate\Http\Request;
 use Mockery as m;
+use Illuminate\Http\Request;
 use PHPUnit\Framework\TestCase;
-use UniSharp\LaravelFilemanager\Lfm;
-use UniSharp\LaravelFilemanager\LfmFileRepository;
-use UniSharp\LaravelFilemanager\LfmStorageRepository;
+use Samsquid\LaravelFilemanager\Lfm;
+use Illuminate\Contracts\Config\Repository as Config;
+use Samsquid\LaravelFilemanager\LfmStorageRepository;
 
 class LfmTest extends TestCase
 {
@@ -17,30 +16,6 @@ class LfmTest extends TestCase
         m::close();
 
         parent::tearDown();
-    }
-
-    public function testGetStorage()
-    {
-        $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.disk')->once()->andReturn('local');
-
-        $lfm = new Lfm($config);
-        $this->assertInstanceOf(LfmStorageRepository::class, $lfm->getStorage('foo/bar'));
-    }
-
-    public function testInput()
-    {
-        $request = m::mock(Request::class);
-        $request->shouldReceive('input')->with('foo')->andReturn('bar');
-
-        $lfm = new Lfm(m::mock(Config::class), $request);
-
-        $this->assertEquals('bar', $lfm->input('foo'));
-    }
-
-    public function testGetNameFromPath()
-    {
-        $this->assertEquals('bar', (new Lfm)->getNameFromPath('foo/bar'));
     }
 
     public function testAllowFolderType()
@@ -58,29 +33,27 @@ class LfmTest extends TestCase
         $this->assertFalse($lfm->allowFolderType('shared'));
     }
 
-    public function testGetCategoryName()
+    public function testAllowMultiUser()
     {
         $config = m::mock(Config::class);
-        $config->shouldReceive('get')
-               ->with('lfm.folder_categories.file.folder_name', m::type('string'))
-               ->once()
-               ->andReturn('files');
-        $config->shouldReceive('get')
-               ->with('lfm.folder_categories.image.folder_name', m::type('string'))
-               ->once()
-               ->andReturn('photos');
-        $config->shouldReceive('get')
-            ->with('lfm.folder_categories')
-            ->andReturn(['file' => [], 'image' => []]);
+        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(true);
 
-        $request = m::mock(Request::class);
-        $request->shouldReceive('input')->with('type')->once()->andReturn('file');
-        $request->shouldReceive('input')->with('type')->once()->andReturn('image');
+        $lfm = new Lfm($config);
 
-        $lfm = new Lfm($config, $request);
+        $this->assertTrue($lfm->allowMultiUser());
+    }
 
-        $this->assertEquals('files', $lfm->getCategoryName('file'));
-        $this->assertEquals('photos', $lfm->getCategoryName('image'));
+    public function testAllowShareFolder()
+    {
+        $config = m::mock(Config::class);
+        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(false);
+        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(true);
+        $config->shouldReceive('get')->with('lfm.allow_share_folder')->once()->andReturn(false);
+
+        $lfm = new Lfm($config);
+
+        $this->assertTrue($lfm->allowShareFolder());
+        $this->assertFalse($lfm->allowShareFolder());
     }
 
     public function testCurrentLfmType()
@@ -102,41 +75,29 @@ class LfmTest extends TestCase
         $this->assertEquals('file', $lfm->currentLfmType());
     }
 
-    public function testGetUserSlug()
+    public function testGetCategoryName()
     {
         $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.user_folder_name')->once()->andReturn(function () {
-            return 'foo';
-        });
+        $config->shouldReceive('get')
+            ->with('lfm.folder_categories.file.folder_name', m::type('string'))
+            ->once()
+            ->andReturn('files');
+        $config->shouldReceive('get')
+            ->with('lfm.folder_categories.image.folder_name', m::type('string'))
+            ->once()
+            ->andReturn('photos');
+        $config->shouldReceive('get')
+            ->with('lfm.folder_categories')
+            ->andReturn(['file' => [], 'image' => []]);
 
-        $lfm = new Lfm($config);
+        $request = m::mock(Request::class);
+        $request->shouldReceive('input')->with('type')->once()->andReturn('file');
+        $request->shouldReceive('input')->with('type')->once()->andReturn('image');
 
-        $this->assertEquals('foo', $lfm->getUserSlug());
-    }
+        $lfm = new Lfm($config, $request);
 
-    public function testGetRootFolder()
-    {
-        $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.allow_multi_user')->andReturn(true);
-        $config->shouldReceive('get')->with('lfm.user_folder_name')->once()->andReturn(function () {
-            return 'foo';
-        });
-        $config->shouldReceive('get')->with('lfm.shared_folder_name')->once()->andReturn('bar');
-
-        $lfm = new Lfm($config);
-
-        $this->assertEquals('/foo', $lfm->getRootFolder('user'));
-        $this->assertEquals('/bar', $lfm->getRootFolder('shared'));
-    }
-
-    public function testGetThumbFolderName()
-    {
-        $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.thumb_folder_name')->once()->andReturn('foo');
-
-        $lfm = new Lfm($config);
-
-        $this->assertEquals('foo', $lfm->getThumbFolderName());
+        $this->assertEquals('files', $lfm->getCategoryName('file'));
+        $this->assertEquals('photos', $lfm->getCategoryName('image'));
     }
 
     public function testGetFileIcon()
@@ -163,27 +124,65 @@ class LfmTest extends TestCase
         $this->assertEquals('File', $lfm->getFileType('bar'));
     }
 
-    public function testAllowMultiUser()
+    public function testGetNameFromPath()
     {
-        $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(true);
-
-        $lfm = new Lfm($config);
-
-        $this->assertTrue($lfm->allowMultiUser());
+        $this->assertEquals('bar', (new Lfm)->getNameFromPath('foo/bar'));
     }
 
-    public function testAllowShareFolder()
+    public function testGetRootFolder()
     {
         $config = m::mock(Config::class);
-        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(false);
-        $config->shouldReceive('get')->with('lfm.allow_multi_user')->once()->andReturn(true);
-        $config->shouldReceive('get')->with('lfm.allow_share_folder')->once()->andReturn(false);
+        $config->shouldReceive('get')->with('lfm.allow_multi_user')->andReturn(true);
+        $config->shouldReceive('get')->with('lfm.user_folder_name')->once()->andReturn(function () {
+            return 'foo';
+        });
+        $config->shouldReceive('get')->with('lfm.shared_folder_name')->once()->andReturn('bar');
 
         $lfm = new Lfm($config);
 
-        $this->assertTrue($lfm->allowShareFolder());
-        $this->assertFalse($lfm->allowShareFolder());
+        $this->assertEquals('/foo', $lfm->getRootFolder('user'));
+        $this->assertEquals('/bar', $lfm->getRootFolder('shared'));
+    }
+
+    public function testGetStorage()
+    {
+        $config = m::mock(Config::class);
+        $config->shouldReceive('get')->with('lfm.disk')->once()->andReturn('local');
+
+        $lfm = new Lfm($config);
+        $this->assertInstanceOf(LfmStorageRepository::class, $lfm->getStorage('foo/bar'));
+    }
+
+    public function testGetThumbFolderName()
+    {
+        $config = m::mock(Config::class);
+        $config->shouldReceive('get')->with('lfm.thumb_folder_name')->once()->andReturn('foo');
+
+        $lfm = new Lfm($config);
+
+        $this->assertEquals('foo', $lfm->getThumbFolderName());
+    }
+
+    public function testGetUserSlug()
+    {
+        $config = m::mock(Config::class);
+        $config->shouldReceive('get')->with('lfm.user_folder_name')->once()->andReturn(function () {
+            return 'foo';
+        });
+
+        $lfm = new Lfm($config);
+
+        $this->assertEquals('foo', $lfm->getUserSlug());
+    }
+
+    public function testInput()
+    {
+        $request = m::mock(Request::class);
+        $request->shouldReceive('input')->with('foo')->andReturn('bar');
+
+        $lfm = new Lfm(m::mock(Config::class), $request);
+
+        $this->assertEquals('bar', $lfm->input('foo'));
     }
 
     public function testTranslateFromUtf8()

@@ -1,20 +1,27 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager;
+namespace Samsquid\LaravelFilemanager;
 
 use Illuminate\Container\Container;
 use Intervention\Image\Facades\Image;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-use UniSharp\LaravelFilemanager\Events\ImageIsUploading;
-use UniSharp\LaravelFilemanager\Events\ImageWasUploaded;
+use Samsquid\LaravelFilemanager\Events\ImageIsUploading;
+use Samsquid\LaravelFilemanager\Events\ImageWasUploaded;
 
 class LfmPath
 {
-    private $working_dir;
-    private $item_name;
+    private $helper;
+
     private $is_thumb = false;
 
-    private $helper;
+    private $item_name;
+
+    private $working_dir;
+
+    public function __call($function_name, $arguments)
+    {
+        return $this->storage->$function_name(...$arguments);
+    }
 
     public function __construct(Lfm $lfm = null)
     {
@@ -28,9 +35,28 @@ class LfmPath
         }
     }
 
-    public function __call($function_name, $arguments)
+    /**
+     * Create folder if not exist.
+     *
+     * @param  string  $path  Real path of a directory.
+     * @return bool
+     */
+    public function createFolder()
     {
-        return $this->storage->$function_name(...$arguments);
+        if ($this->storage->exists($this)) {
+            return false;
+        }
+
+        $this->storage->makeDirectory(0777, true, true);
+    }
+
+    public function delete()
+    {
+        if ($this->isDirectory()) {
+            return $this->storage->deleteDirectory();
+        } else {
+            return $this->storage->delete();
+        }
     }
 
     public function dir($working_dir)
@@ -40,23 +66,95 @@ class LfmPath
         return $this;
     }
 
-    public function thumb($is_thumb = true)
+    /**
+     * Check a folder and its subfolders is empty or not.
+     *
+     * @param  string  $directory_path  Real path of a directory.
+     * @return bool
+     */
+    public function directoryIsEmpty()
     {
-        $this->is_thumb = $is_thumb;
-
-        return $this;
+        return count($this->storage->allFiles()) == 0;
     }
 
-    public function setName($item_name)
+    public function error($error_type, $variables = [])
     {
-        $this->item_name = $item_name;
+        return $this->helper->error($error_type, $variables);
+    }
 
-        return $this;
+    public function files()
+    {
+        $files = array_map(function ($file_path) {
+            return $this->pretty($file_path);
+        }, $this->storage->files());
+
+        return $this->sortByColumn($files);
+    }
+
+    public function folders()
+    {
+        $all_folders = array_map(function ($directory_path) {
+            return $this->pretty($directory_path);
+        }, $this->storage->directories());
+
+        $folders = array_filter($all_folders, function ($directory) {
+            return $directory->name !== $this->helper->getThumbFolderName();
+        });
+
+        return $this->sortByColumn($folders);
     }
 
     public function getName()
     {
         return $this->item_name;
+    }
+
+    public function isDirectory()
+    {
+        $working_dir = $this->path('working_dir');
+        $parent_dir  = substr($working_dir, 0, strrpos($working_dir, '/'));
+
+        $parent_directories = array_map(function ($directory_path) {
+            return app(static::class)->translateToLfmPath($directory_path);
+        }, app(static::class)->dir($parent_dir)->directories());
+
+        return in_array($this->path('url'), $parent_directories);
+    }
+
+    public function makeThumbnail($file_name)
+    {
+        $original_image = $this->pretty($file_name);
+
+        if (!$original_image->shouldCreateThumb()) {
+            return;
+        }
+
+        // create folder for thumbnails
+        $this->setName(null)->thumb(true)->createFolder();
+
+        // generate cropped image content
+        $this->setName($file_name)->thumb(true);
+        $image = Image::make($original_image->get())
+            ->fit(config('lfm.thumb_img_width', 200), config('lfm.thumb_img_height', 200));
+
+        $this->storage->put($image->stream()->detach());
+    }
+
+    public function normalizeWorkingDir()
+    {
+        $path = $this->working_dir
+        ?: $this->helper->input('working_dir')
+        ?: $this->helper->getRootFolder();
+
+        if ($this->is_thumb) {
+            $path .= Lfm::DS . $this->helper->getThumbFolderName();
+        }
+
+        if ($this->getName()) {
+            $path .= Lfm::DS . $this->getName();
+        }
+
+        return $path;
     }
 
     public function path($type = 'storage')
@@ -78,113 +176,19 @@ class LfmPath
         }
     }
 
-    public function translateToLfmPath($path)
-    {
-        return str_replace($this->helper->ds(), Lfm::DS, $path);
-    }
-
-    public function translateToOsPath($path)
-    {
-        return str_replace(Lfm::DS, $this->helper->ds(), $path);
-    }
-
-    public function url()
-    {
-        return $this->storage->url($this->path('url'));
-    }
-
-    public function folders()
-    {
-        $all_folders = array_map(function ($directory_path) {
-            return $this->pretty($directory_path);
-        }, $this->storage->directories());
-
-        $folders = array_filter($all_folders, function ($directory) {
-            return $directory->name !== $this->helper->getThumbFolderName();
-        });
-
-        return $this->sortByColumn($folders);
-    }
-
-    public function files()
-    {
-        $files = array_map(function ($file_path) {
-            return $this->pretty($file_path);
-        }, $this->storage->files());
-
-        return $this->sortByColumn($files);
-    }
-
     public function pretty($item_path)
     {
         return Container::getInstance()->makeWith(LfmItem::class, [
-            'lfm' => (clone $this)->setName($this->helper->getNameFromPath($item_path)),
-            'helper' => $this->helper
+            'lfm'    => (clone $this)->setName($this->helper->getNameFromPath($item_path)),
+            'helper' => $this->helper,
         ]);
     }
 
-    public function delete()
+    public function setName($item_name)
     {
-        if ($this->isDirectory()) {
-            return $this->storage->deleteDirectory();
-        } else {
-            return $this->storage->delete();
-        }
-    }
+        $this->item_name = $item_name;
 
-    /**
-     * Create folder if not exist.
-     *
-     * @param  string  $path  Real path of a directory.
-     * @return bool
-     */
-    public function createFolder()
-    {
-        if ($this->storage->exists($this)) {
-            return false;
-        }
-
-        $this->storage->makeDirectory(0777, true, true);
-    }
-
-    public function isDirectory()
-    {
-        $working_dir = $this->path('working_dir');
-        $parent_dir = substr($working_dir, 0, strrpos($working_dir, '/'));
-
-        $parent_directories = array_map(function ($directory_path) {
-            return app(static::class)->translateToLfmPath($directory_path);
-        }, app(static::class)->dir($parent_dir)->directories());
-
-        return in_array($this->path('url'), $parent_directories);
-    }
-
-    /**
-     * Check a folder and its subfolders is empty or not.
-     *
-     * @param  string  $directory_path  Real path of a directory.
-     * @return bool
-     */
-    public function directoryIsEmpty()
-    {
-        return count($this->storage->allFiles()) == 0;
-    }
-
-    public function normalizeWorkingDir()
-    {
-        $path = $this->working_dir
-            ?: $this->helper->input('working_dir')
-            ?: $this->helper->getRootFolder();
-
-        if ($this->is_thumb) {
-            $path .= Lfm::DS . $this->helper->getThumbFolderName();
-        }
-
-        if ($this->getName()) {
-            $path .= Lfm::DS . $this->getName();
-        }
-
-        return $path;
+        return $this;
     }
 
     /**
@@ -209,9 +213,21 @@ class LfmPath
         return $arr_items;
     }
 
-    public function error($error_type, $variables = [])
+    public function thumb($is_thumb = true)
     {
-        return $this->helper->error($error_type, $variables);
+        $this->is_thumb = $is_thumb;
+
+        return $this;
+    }
+
+    public function translateToLfmPath($path)
+    {
+        return str_replace($this->helper->ds(), Lfm::DS, $path);
+    }
+
+    public function translateToOsPath($path)
+    {
+        return str_replace(Lfm::DS, $this->helper->ds(), $path);
     }
 
     // Upload section
@@ -234,40 +250,9 @@ class LfmPath
         return $new_file_name;
     }
 
-    private function uploadValidator($file)
+    public function url()
     {
-        if (empty($file)) {
-            return $this->error('file-empty');
-        } elseif (! $file instanceof UploadedFile) {
-            return $this->error('instance');
-        } elseif ($file->getError() == UPLOAD_ERR_INI_SIZE) {
-            return $this->error('file-size', ['max' => ini_get('upload_max_filesize')]);
-        } elseif ($file->getError() != UPLOAD_ERR_OK) {
-            throw new \Exception('File failed to upload. Error code: ' . $file->getError());
-        }
-
-        $new_file_name = $this->getNewName($file);
-
-        if ($this->setName($new_file_name)->exists() && !config('lfm.over_write_on_duplicate')) {
-            return $this->error('file-exist');
-        }
-
-        if (config('lfm.should_validate_mime', false)) {
-            $mimetype = $file->getMimeType();
-            if (false === in_array($mimetype, $this->helper->availableMimeTypes())) {
-                return $this->error('mime') . $mimetype;
-            }
-        }
-
-        if (config('lfm.should_validate_size', false)) {
-            // size to kb unit is needed
-            $file_size = $file->getSize() / 1000;
-            if ($file_size > $this->helper->maxUploadSize()) {
-                return $this->error('size') . $file_size;
-            }
-        }
-
-        return 'pass';
+        return $this->storage->url($this->path('url'));
     }
 
     private function getNewName($file)
@@ -299,22 +284,39 @@ class LfmPath
         return $new_file_name;
     }
 
-    public function makeThumbnail($file_name)
+    private function uploadValidator($file)
     {
-        $original_image = $this->pretty($file_name);
-
-        if (!$original_image->shouldCreateThumb()) {
-            return;
+        if (empty($file)) {
+            return $this->error('file-empty');
+        } elseif (!$file instanceof UploadedFile) {
+            return $this->error('instance');
+        } elseif ($file->getError() == UPLOAD_ERR_INI_SIZE) {
+            return $this->error('file-size', ['max' => ini_get('upload_max_filesize')]);
+        } elseif ($file->getError() != UPLOAD_ERR_OK) {
+            throw new \Exception('File failed to upload. Error code: ' . $file->getError());
         }
 
-        // create folder for thumbnails
-        $this->setName(null)->thumb(true)->createFolder();
+        $new_file_name = $this->getNewName($file);
 
-        // generate cropped image content
-        $this->setName($file_name)->thumb(true);
-        $image = Image::make($original_image->get())
-            ->fit(config('lfm.thumb_img_width', 200), config('lfm.thumb_img_height', 200));
+        if ($this->setName($new_file_name)->exists() && !config('lfm.over_write_on_duplicate')) {
+            return $this->error('file-exist');
+        }
 
-        $this->storage->put($image->stream()->detach());
+        if (config('lfm.should_validate_mime', false)) {
+            $mimetype = $file->getMimeType();
+            if (false === in_array($mimetype, $this->helper->availableMimeTypes())) {
+                return $this->error('mime') . $mimetype;
+            }
+        }
+
+        if (config('lfm.should_validate_size', false)) {
+            // size to kb unit is needed
+            $file_size = $file->getSize() / 1000;
+            if ($file_size > $this->helper->maxUploadSize()) {
+                return $this->error('size') . $file_size;
+            }
+        }
+
+        return 'pass';
     }
 }

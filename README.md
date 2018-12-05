@@ -1,7 +1,7 @@
 <p align="center"><img src="https://unisharp.github.io/laravel-filemanager/images/logo_vertical_colored.png"></p>
 
 <p align="center">
-  <a target="_blank" href="https://travis-ci.org/UniSharp/laravel-filemanager"><img src="https://img.shields.io/travis/UniSharp/laravel-filemanager.svg"></a>
+  <a target="_blank" href="https://travis-ci.org/Samsquid/laravel-filemanager"><img src="https://img.shields.io/travis/Samsquid/laravel-filemanager.svg"></a>
   <a target="_blank" href="https://packagist.org/packages/unisharp/laravel-filemanager"><img src="https://poser.pugx.org/unisharp/laravel-filemanager/downloads"></a>
   <a target="_blank" href="https://packagist.org/packages/unisharp/laravel-filemanager"><img src="https://img.shields.io/badge/unstable-v2.0.0--alpha5-orange.svg"></a>
   <a target="_blank" href="https://packagist.org/packages/unisharp/laravel-filemanager"><img src="https://poser.pugx.org/unisharp/laravel-filemanager/v/stable"></a>
@@ -23,7 +23,7 @@
 ・
   <a href="http://unisharp.github.io/laravel-filemanager/upgrade">Upgrade</a>
 ・
-  <a href="https://github.com/UniSharp/laravel-filemanager-example-5.3">Demo</a>
+  <a href="https://github.com/Samsquid/laravel-filemanager-example-5.3">Demo</a>
 </p>
 
 ## Installing alpha version
@@ -33,7 +33,7 @@ The alpha version of `v2.0` contains support of cloud storage and fresh new UI w
  * Run `composer require unisharp/laravel-filemanager:v2.0.0-alpha5` to get the latest release of alpha version.
 
 ## Errors with namespace
-We have changed namespace from `Unisharp` to `UniSharp`, and change the first character of every namespace into capital.
+We have changed namespace from `Unisharp` to `Samsquid`, and change the first character of every namespace into capital.
 
 If you are updating this package and encounter any errors like `Class not found`, please remove this package entirely and reinstall again.
 
@@ -52,8 +52,8 @@ If, for example, you want to ensure that only logged in users have the ability t
 
 ```php
 Route::group(['middleware' => 'auth'], function () {
-    Route::get('/laravel-filemanager', '\UniSharp\LaravelFilemanager\Controllers\LfmController@show');
-    Route::post('/laravel-filemanager/upload', '\UniSharp\LaravelFilemanager\Controllers\UploadController@upload');
+    Route::get('/laravel-filemanager', '\Samsquid\LaravelFilemanager\Controllers\LfmController@show');
+    Route::post('/laravel-filemanager/upload', '\Samsquid\LaravelFilemanager\Controllers\UploadController@upload');
     // list all lfm routes here...
 });
 ```
@@ -87,11 +87,11 @@ This approach ensures that only authenticated users have access to the Laravel-F
 
  * [Stream](https://github.com/g0110280)
  * [@gwleuverink](https://github.com/gwleuverink)
- * All [@UniSharp](https://github.com/UniSharp) members
+ * All [@Samsquid](https://github.com/Samsquid) members
 
 ### Contributors
 
- * [All contibutors](https://github.com/UniSharp/laravel-filemanager/graphs/contributors) from GitHub. (issues / PR)
+ * [All contibutors](https://github.com/Samsquid/laravel-filemanager/graphs/contributors) from GitHub. (issues / PR)
  * [@taswler](https://github.com/tsawler) the original author of this package.
  * Nathan for providing security suggestions.
  * [@mdnazmulhasan27771](https://github.com/mdnazmulhasan27771) the designer of our logo. (Licensed CC BY 4.0)

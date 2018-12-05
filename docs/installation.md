@@ -20,7 +20,7 @@
     Add service providers
 
     ```php
-    UniSharp\LaravelFilemanager\LaravelFilemanagerServiceProvider::class,
+    Samsquid\LaravelFilemanager\LaravelFilemanagerServiceProvider::class,
     Intervention\Image\ImageServiceProvider::class,
     ```
 
@@ -44,7 +44,7 @@
 
     ```php
     Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['web', 'auth']], function () {
-        \UniSharp\LaravelFilemanager\Lfm::routes();
+        \Samsquid\LaravelFilemanager\Lfm::routes();
     });
     ```
 

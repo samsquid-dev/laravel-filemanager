@@ -1,9 +1,9 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
-use UniSharp\LaravelFilemanager\Lfm;
-use UniSharp\LaravelFilemanager\LfmPath;
+use Samsquid\LaravelFilemanager\Lfm;
+use Samsquid\LaravelFilemanager\LfmPath;
 
 class LfmController extends Controller
 {
@@ -29,54 +29,6 @@ class LfmController extends Controller
     }
 
     /**
-     * Show the filemanager.
-     *
-     * @return mixed
-     */
-    public function show()
-    {
-        return view('laravel-filemanager::index')
-            ->withHelper($this->helper);
-    }
-
-    /**
-     * Check if any extension or config is missing.
-     *
-     * @return array
-     */
-    public function getErrors()
-    {
-        $arr_errors = [];
-
-        if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
-            array_push($arr_errors, trans('laravel-filemanager::lfm.message-extension_not_found'));
-        }
-
-        if (! extension_loaded('exif')) {
-            array_push($arr_errors, 'EXIF extension not found.');
-        }
-
-        if (! extension_loaded('fileinfo')) {
-            array_push($arr_errors, 'Fileinfo extension not found.');
-        }
-
-        $mine_config_key = 'lfm.folder_categories.'
-            . $this->helper->currentLfmType()
-            . '.valid_mime';
-
-        if (! is_array(config($mine_config_key))) {
-            array_push($arr_errors, 'Config : ' . $mine_config_key . ' is not a valid array.');
-        }
-
-        return $arr_errors;
-    }
-
-    public function error($error_type, $variables = [])
-    {
-        return $this->helper->error($error_type, $variables);
-    }
-
-    /**
      * Overrides settings in php.ini.
      *
      * @return null
@@ -93,5 +45,53 @@ class LfmController extends Controller
                 ini_set($key, $value);
             }
         }
+    }
+
+    public function error($error_type, $variables = [])
+    {
+        return $this->helper->error($error_type, $variables);
+    }
+
+    /**
+     * Check if any extension or config is missing.
+     *
+     * @return array
+     */
+    public function getErrors()
+    {
+        $arr_errors = [];
+
+        if (!extension_loaded('gd') && !extension_loaded('imagick')) {
+            array_push($arr_errors, trans('laravel-filemanager::lfm.message-extension_not_found'));
+        }
+
+        if (!extension_loaded('exif')) {
+            array_push($arr_errors, 'EXIF extension not found.');
+        }
+
+        if (!extension_loaded('fileinfo')) {
+            array_push($arr_errors, 'Fileinfo extension not found.');
+        }
+
+        $mine_config_key = 'lfm.folder_categories.'
+        . $this->helper->currentLfmType()
+            . '.valid_mime';
+
+        if (!is_array(config($mine_config_key))) {
+            array_push($arr_errors, 'Config : ' . $mine_config_key . ' is not a valid array.');
+        }
+
+        return $arr_errors;
+    }
+
+    /**
+     * Show the filemanager.
+     *
+     * @return mixed
+     */
+    public function show()
+    {
+        return view('laravel-filemanager::index')
+            ->withHelper($this->helper);
     }
 }

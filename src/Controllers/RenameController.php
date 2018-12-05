@@ -1,11 +1,11 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
-use UniSharp\LaravelFilemanager\Events\ImageIsRenaming;
-use UniSharp\LaravelFilemanager\Events\ImageWasRenamed;
-use UniSharp\LaravelFilemanager\Events\FolderIsRenaming;
-use UniSharp\LaravelFilemanager\Events\FolderWasRenamed;
+use Samsquid\LaravelFilemanager\Events\ImageIsRenaming;
+use Samsquid\LaravelFilemanager\Events\ImageWasRenamed;
+use Samsquid\LaravelFilemanager\Events\FolderIsRenaming;
+use Samsquid\LaravelFilemanager\Events\FolderWasRenamed;
 
 class RenameController extends LfmController
 {
@@ -28,12 +28,12 @@ class RenameController extends LfmController
 
         if (config('lfm.alphanumeric_directory') && preg_match('/[^\w-]/i', $new_name)) {
             return parent::error('folder-alnum');
-        // return parent::error('file-alnum');
+            // return parent::error('file-alnum');
         } elseif ($this->lfm->setName($new_name)->exists()) {
             return parent::error('rename');
         }
 
-        if (! $is_directory) {
+        if (!$is_directory) {
             $extension = $old_file->extension();
             if ($extension) {
                 $new_name = str_replace('.' . $extension, '', $new_name) . '.' . $extension;

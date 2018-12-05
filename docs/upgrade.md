@@ -18,6 +18,6 @@
   1. Clear browser cache if page is broken after upgrading.
 
 ## Errors with namespace
-We have changed namespace from `Unisharp` to `UniSharp`, and change the first character of every namespace into capital.
+We have changed namespace from `Unisharp` to `Samsquid`, and change the first character of every namespace into capital.
 
 If you are updating this package and encounter any errors like `Class not found`, please remove this package entirely and reinstall again.

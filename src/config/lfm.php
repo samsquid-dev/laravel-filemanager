@@ -33,7 +33,7 @@ return [
     // behavior on files with identical name
     // setting it to true cause old file replace with new one
     // setting it to false show `error-file-exist` error and stop upload
-    'over_write_on_duplicate' => false,
+    'over_write_on_duplicate'  => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ return [
     // Then you can rewrite userField function in App\Handler\ConfigHandler class
     // And set 'user_field' to App\Handler\ConfigHandler::class
     // Ex: The private folder of user will be named as the user id.
-    'user_folder_name'         => UniSharp\LaravelFilemanager\Handlers\ConfigHandler::class,
+    'user_folder_name'         => Samsquid\LaravelFilemanager\Handlers\ConfigHandler::class,
 
     'shared_folder_name'       => 'shares',
 

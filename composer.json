@@ -18,7 +18,7 @@
       "email": "trevor.sawler@gmail.com"
     },
     {
-      "name": "UniSharp Ltd.",
+      "name": "Samsquid Ltd.",
       "email": "opensource@unisharp.com"
     }
   ],
@@ -44,7 +44,7 @@
   },
   "autoload": {
     "psr-4": {
-      "UniSharp\\LaravelFilemanager\\": "src/"
+      "Samsquid\\LaravelFilemanager\\": "src/"
     }
   },
   "autoload-dev": {
@@ -55,7 +55,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "UniSharp\\LaravelFilemanager\\LaravelFilemanagerServiceProvider"
+        "Samsquid\\LaravelFilemanager\\LaravelFilemanagerServiceProvider"
       ],
       "aliases": {
       }

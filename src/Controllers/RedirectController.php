@@ -1,6 +1,6 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
 use Illuminate\Support\Facades\Storage;
 
@@ -10,7 +10,7 @@ class RedirectController extends LfmController
     {
         $storage = Storage::disk($this->helper->config('disk'));
 
-        if (! $storage->exists($file_path)) {
+        if (!$storage->exists($file_path)) {
             abort(404);
         }
 

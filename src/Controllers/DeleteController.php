@@ -1,9 +1,9 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
-use UniSharp\LaravelFilemanager\Events\ImageIsDeleting;
-use UniSharp\LaravelFilemanager\Events\ImageWasDeleted;
+use Samsquid\LaravelFilemanager\Events\ImageIsDeleting;
+use Samsquid\LaravelFilemanager\Events\ImageWasDeleted;
 
 class DeleteController extends LfmController
 {
@@ -15,11 +15,11 @@ class DeleteController extends LfmController
     public function getDelete()
     {
         $item_names = request('items');
-        $errors = [];
+        $errors     = [];
 
         foreach ($item_names as $name_to_delete) {
             $file_to_delete = $this->lfm->pretty($name_to_delete);
-            $file_path = $file_to_delete->path();
+            $file_path      = $file_to_delete->path();
 
             event(new ImageIsDeleting($file_path));
 
@@ -28,13 +28,13 @@ class DeleteController extends LfmController
                 continue;
             }
 
-            if (! $this->lfm->setName($name_to_delete)->exists()) {
+            if (!$this->lfm->setName($name_to_delete)->exists()) {
                 array_push($errors, parent::error('folder-not-found', ['folder' => $file_path]));
                 continue;
             }
 
             if ($this->lfm->setName($name_to_delete)->isDirectory()) {
-                if (! $this->lfm->setName($name_to_delete)->directoryIsEmpty()) {
+                if (!$this->lfm->setName($name_to_delete)->directoryIsEmpty()) {
                     array_push($errors, parent::error('delete-folder'));
                     continue;
                 }

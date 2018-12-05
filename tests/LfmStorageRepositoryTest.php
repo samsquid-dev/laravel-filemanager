@@ -2,12 +2,12 @@
 
 namespace Tests;
 
-use Illuminate\Support\Facades\Storage;
 use Mockery as m;
 use PHPUnit\Framework\TestCase;
-use UniSharp\LaravelFilemanager\Lfm;
-use UniSharp\LaravelFilemanager\LfmPath;
-use UniSharp\LaravelFilemanager\LfmStorageRepository;
+use Samsquid\LaravelFilemanager\Lfm;
+use Illuminate\Support\Facades\Storage;
+use Samsquid\LaravelFilemanager\LfmPath;
+use Samsquid\LaravelFilemanager\LfmStorageRepository;
 
 class LfmStorageRepositoryTest extends TestCase
 {
@@ -43,16 +43,16 @@ class LfmStorageRepositoryTest extends TestCase
         $this->assertEquals('baz', $this->storage->functionToCall());
     }
 
-    public function testRootPath()
-    {
-        $this->assertEquals('foo/bar', $this->storage->rootPath());
-    }
-
     public function testMove()
     {
         $new_lfm_path = m::mock(LfmPath::class);
         $new_lfm_path->shouldReceive('path')->with('storage')->andReturn('foo/bar/baz');
 
         $this->assertTrue($this->storage->move($new_lfm_path));
+    }
+
+    public function testRootPath()
+    {
+        $this->assertEquals('foo/bar', $this->storage->rootPath());
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace UniSharp\LaravelFilemanager\Controllers;
+namespace Samsquid\LaravelFilemanager\Controllers;
 
 use Intervention\Image\Facades\Image;
-use UniSharp\LaravelFilemanager\Events\ImageIsCropping;
-use UniSharp\LaravelFilemanager\Events\ImageWasCropped;
+use Samsquid\LaravelFilemanager\Events\ImageIsCropping;
+use Samsquid\LaravelFilemanager\Events\ImageWasCropped;
 
 class CropController extends LfmController
 {
@@ -18,7 +18,7 @@ class CropController extends LfmController
         return view('laravel-filemanager::crop')
             ->with([
                 'working_dir' => request('working_dir'),
-                'img' => $this->lfm->pretty(request('img'))
+                'img'         => $this->lfm->pretty(request('img')),
             ]);
     }
 
@@ -29,12 +29,12 @@ class CropController extends LfmController
     {
         $image_name = request('img');
         $image_path = $this->lfm->setName($image_name)->path('absolute');
-        $crop_path = $image_path;
+        $crop_path  = $image_path;
 
-        if (! $overWrite) {
-            $fileParts = explode('.', $image_name);
+        if (!$overWrite) {
+            $fileParts                        = explode('.', $image_name);
             $fileParts[count($fileParts) - 2] = $fileParts[count($fileParts) - 2] . '_cropped_' . time();
-            $crop_path = $this->lfm->setName(implode('.', $fileParts))->path('absolute');
+            $crop_path                        = $this->lfm->setName(implode('.', $fileParts))->path('absolute');
         }
 
         event(new ImageIsCropping($image_path));
